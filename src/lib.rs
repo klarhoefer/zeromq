@@ -1,6 +1,7 @@
 
 mod zeromq_sys;
 use zeromq_sys::*;
+pub use zeromq_sys::version;
 
 pub enum SocketType {
     ZmqPair,
@@ -73,19 +74,19 @@ fn add_zero(s: &str) -> Vec<u8> {
 impl Socket {
     pub fn bind(&self, addr: &str) -> bool {
         let buffer = add_zero(addr);
-        let ret = unsafe { zmq_bind(self.sck, buffer.as_ptr()) };
-        ret == ZMQ_SUCCESS
+        let rc = unsafe { zmq_bind(self.sck, buffer.as_ptr()) };
+        rc == ZMQ_SUCCESS
     }
 
     pub fn connect(&self, addr: &str) -> bool {
         let buffer = add_zero(addr);
-        let ret = unsafe { zmq_bind(self.sck, buffer.as_ptr()) };
-        ret == ZMQ_SUCCESS
+        let rc = unsafe { zmq_bind(self.sck, buffer.as_ptr()) };
+        rc == ZMQ_SUCCESS
     }
 
     pub fn send(&self, buffer: &[u8], opts: SendRecvOptions) -> bool {
-        let ret = unsafe { zmq_send(self.sck, buffer.as_ptr(), buffer.len(), opts.into()) };
-        ret == ZMQ_SUCCESS
+        let rc = unsafe { zmq_send(self.sck, buffer.as_ptr(), buffer.len(), opts.into()) };
+        rc == ZMQ_SUCCESS
     }
 }
 
@@ -100,10 +101,11 @@ impl Drop for Socket {
 #[cfg(test)]
 mod tests {
 
-    use super::{Context, SocketType};
+    use super::{Context, SocketType, version};
 
     #[test]
     fn it_works() {
+        println!("Version {:?}", version());
         let ctx = Context::new();
         let sck = ctx.socket(SocketType::ZmqPub);
         sck.bind("tcp://*:5555");
