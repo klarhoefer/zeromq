@@ -173,8 +173,9 @@ mod tests {
         if !sck.bind("tcp://*:5555") {
             panic!("Could not bind!");
         }
-        sleep_ms(1000 * 4);
-        println!("Publishing");
+        println!("Ready!");
+        sleep_ms(1000 * 2);
+        println!("Publishing...");
         for i in 0..64 {
             let msg = format!("This is message #{}", i);
             sck.send(msg.as_bytes(), SendRecvOptions::ZmqWait);
@@ -186,12 +187,12 @@ mod tests {
     fn thread_b() {
         let ctx = Context::new();
         let mut sck = ctx.socket(SocketType::ZmqSub);
-        sleep_ms(1000 * 2);
+        sleep_ms(1000 * 1);
         if !sck.connect("tcp://localhost:5555") {
             panic!("Could not connect!");
         }
         sck.set_options(SocketOptions::ZmqSubscribe, None);
-        println!("Receiving");
+        println!("Receiving...");
         loop {
             if let Some(v) = sck.recv(SendRecvOptions::ZmqWait) {
                 let s = str::from_utf8(&v).unwrap();
