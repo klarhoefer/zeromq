@@ -26,6 +26,8 @@ pub const ZMQ_STREAM: c_int = 11;
 
 
 extern {
+    pub fn zmq_version(major: *mut c_int, minor: *mut c_int, patch: *mut c_int);
+
     pub fn zmq_ctx_new() -> ZmqContext;
     pub fn zmq_ctx_destroy(ctx: ZmqContext) -> c_int;
 
@@ -37,4 +39,14 @@ extern {
 
     pub fn zmq_send(sck: ZmqSocket, buffer: *const u8, len: usize, flags: c_int) -> c_int;
     pub fn zmq_recv(sck: ZmqSocket, buffer: *mut u8, len: usize, flags: c_int) -> c_int;
+}
+
+pub fn version() -> (c_int, c_int, c_int) {
+    let mut major: c_int = 0;
+    let mut minor: c_int = 0;
+    let mut patch: c_int = 0;
+    unsafe {
+        zmq_version(&mut major as *mut _, &mut minor as *mut _, &mut patch as *mut _);
+    }
+    (major, minor, patch)
 }
