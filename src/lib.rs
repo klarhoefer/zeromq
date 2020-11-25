@@ -60,7 +60,7 @@ impl Context {
 
     pub fn socket(&self, sock_type: SocketType) -> Socket {
         let sck = unsafe { zmq_socket(self.ctx, sock_type.into()) };
-        Socket { sck }
+        Socket { sck, addr: None }
     }
 }
 
@@ -75,25 +75,44 @@ impl Drop for Context {
 
 pub struct Socket {
     sck: ZmqSocket,
-}
-
-fn add_zero(s: &str) -> Vec<u8> {
-    let mut buffer = s.bytes().collect::<Vec<_>>();
-    buffer.push(0);
-    buffer
+    addr: Option<String>,
 }
 
 impl Socket {
-    pub fn bind(&self, addr: &str) -> bool {
-        let buffer = add_zero(addr);
-        let rc = unsafe { zmq_bind(self.sck, buffer.as_ptr()) };
+    pub fn bind(&mut self, addr: &str) -> bool {
+        let mut addr = addr.to_string();
+        addr.push('\0');
+        let rc = unsafe { zmq_bind(self.sck, addr.as_ptr()) };
+        self.addr = Some(addr);
         rc == ZMQ_SUCCESS
     }
 
-    pub fn connect(&self, addr: &str) -> bool {
-        let buffer = add_zero(addr);
-        let rc = unsafe { zmq_connect(self.sck, buffer.as_ptr()) };
+    pub fn unbind(&mut self) -> bool {
+        if let Some(addr) = &self.addr {
+            let rc = unsafe { zmq_unbind(self.sck, addr.as_ptr()) };
+            self.addr = None;
+            rc == ZMQ_SUCCESS
+        } else {
+            false
+        }
+    }
+
+    pub fn connect(&mut self, addr: &str) -> bool {
+        let mut addr = addr.to_string();
+        addr.push('\0');
+        let rc = unsafe { zmq_connect(self.sck, addr.as_ptr()) };
+        self.addr = Some(addr);
         rc == ZMQ_SUCCESS
+    }
+
+    pub fn disconnect(&mut self) -> bool {
+        if let Some(addr) = &self.addr {
+            let rc = unsafe { zmq_disconnect(self.sck, addr.as_ptr()) };
+            self.addr = None;
+            rc == ZMQ_SUCCESS
+        } else {
+            false
+        }
     }
 
     pub fn send(&self, buffer: &[u8], opts: SendRecvOptions) -> bool {
@@ -136,22 +155,27 @@ impl Drop for Socket {
 #[cfg(test)]
 mod tests {
 
-    use std::thread::sleep_ms;
+    use std::thread::sleep;
+    use std::time::Duration;
     use std::str;
     
+    fn sleep_ms(ms: u64) {
+        sleep(Duration::from_millis(ms));
+    }
+
     use super::{Context, SocketType, version, SendRecvOptions, SocketOptions};
 
     #[test]
     fn thread_a() {
         println!("Version {:?}", version());
         let ctx = Context::new();
-        let sck = ctx.socket(SocketType::ZmqPub);
+        let mut sck = ctx.socket(SocketType::ZmqPub);
         if !sck.bind("tcp://*:5555") {
             panic!("Could not bind!");
         }
         sleep_ms(1000 * 4);
         println!("Publishing");
-        for i in 0..512 {
+        for i in 0..64 {
             let msg = format!("This is message #{}", i);
             sck.send(msg.as_bytes(), SendRecvOptions::ZmqWait);
         }
@@ -161,7 +185,7 @@ mod tests {
     #[test]
     fn thread_b() {
         let ctx = Context::new();
-        let sck = ctx.socket(SocketType::ZmqSub);
+        let mut sck = ctx.socket(SocketType::ZmqSub);
         sleep_ms(1000 * 2);
         if !sck.connect("tcp://localhost:5555") {
             panic!("Could not connect!");
