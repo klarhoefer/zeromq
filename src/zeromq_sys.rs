@@ -121,7 +121,9 @@ extern {
     pub fn zmq_close(sck: ZmqSocket) -> c_int;
 
     pub fn zmq_bind(sck: ZmqSocket, addr: CharPtr) -> c_int;
+    pub fn zmq_unbind(sck: ZmqSocket, addr: CharPtr) -> c_int;
     pub fn zmq_connect(sck: ZmqSocket, addr: CharPtr) -> c_int;
+    pub fn zmq_disconnect(sck: ZmqSocket, addr: CharPtr) -> c_int;
     pub fn zmq_setsockopt(sck: ZmqSocket, option_id: c_int, option_value: *const u8, option_len: usize) -> c_int;
 
     pub fn zmq_send(sck: ZmqSocket, buffer: *const u8, len: usize, flags: c_int) -> c_int;
